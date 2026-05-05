@@ -1,9 +1,9 @@
 NAME=ft_strace
 CC=gcc
-CFLAGS=-Wall -Wextra -Werror -Iinc
+CFLAGS=-Wall -Wextra -Werror -Iinc -D_GNU_SOURCE
 LDFLAGS=-lm
 OBJDIR=obj
-SOURCES=src/main.c
+SOURCES=src/main.c src/strace.c src/syscall_table.c
 OBJECTS=$(SOURCES:src/%.c=$(OBJDIR)/%.o)
 
 all: $(NAME)
