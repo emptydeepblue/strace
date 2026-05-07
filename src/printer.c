@@ -16,8 +16,8 @@ void print_syscall_retval(long long retval) {
     if ((unsigned long long)retval > -4096ULL) {
         int err = -retval;
         const char *n = strerrorname_np(err);
-        printf(" = -1 %s (%s)\n", n ? n : "?", strerror(err));
+        fprintf(stderr, " = -1 %s (%s)\n", n ? n : "?", strerror(err));
     } else {
-        printf(" = %lld\n", retval);
+        fprintf(stderr, " = %lld\n", retval);
     }
 }

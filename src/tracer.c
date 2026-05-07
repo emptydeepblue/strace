@@ -6,7 +6,7 @@
 /*   By: everonel <everonel@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/05/07 11:39:38 by everonel          #+#    #+#             */
-/*   Updated: 2026/05/07 11:41:33 by everonel         ###   ########.fr       */
+/*   Updated: 2026/05/07 14:55:55 by everonel         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,9 +21,16 @@ static int handle_syscall_stop(pid_t pid, int *in_syscall) {
         return -1;
     }
     if (!*in_syscall) {
-        const char *name = syscalls_x86_64[regs.orig_rax].name;
-        printf("%s(...)", name ? name : "syscall_???");
-        fflush(stdout);
+        unsigned long nr = regs.orig_rax;
+        const syscall_info_t *info = (nr < syscalls_x86_64_count) ? &syscalls_x86_64[nr] : NULL;
+        const unsigned long argv[6] = { regs.rdi, regs.rsi, regs.rdx, regs.r10, regs.r8, regs.r9 };
+        fprintf(stderr, "%s(", (info && info->name) ? info->name : "syscall_???");
+        int n = info ? info->nargs : 0;
+        for (int i = 0; i < n; i++) {
+            if (i > 0) fprintf(stderr, ", ");
+            format_arg(pid, info->args[i], argv[i], argv, i);
+        }
+        fprintf(stderr, ")");
     } else {
         print_syscall_retval((long long)regs.rax);
     }
@@ -68,13 +75,13 @@ int run_tracer(pid_t tracee) {
         }
 
         if (WIFEXITED(status)) {
-            if (in_syscall) printf(" = ?\n"); /* e.g. exit_group never returns */
-            printf("+++ exited with %d +++\n", WEXITSTATUS(status));
+            if (in_syscall) fprintf(stderr, " = ?\n"); /* e.g. exit_group never returns */
+            fprintf(stderr, "+++ exited with %d +++\n", WEXITSTATUS(status));
             break;
         }
         if (WIFSIGNALED(status)) {
-            if (in_syscall) printf(" = ?\n");
-            printf("+++ killed by signal %d +++\n", WTERMSIG(status));
+            if (in_syscall) fprintf(stderr, " = ?\n");
+            fprintf(stderr, "+++ killed by signal %d +++\n", WTERMSIG(status));
             break;
         }
 
@@ -82,8 +89,7 @@ int run_tracer(pid_t tracee) {
         int sig = 0;
 
         if (event == PTRACE_EVENT_EXEC) {
-            printf("execve(...)");
-            fflush(stdout);
+            fprintf(stderr, "execve(...)");
             in_syscall = 1;
             seen_exec = 1;
         } else if (event != 0) {
