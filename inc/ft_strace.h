@@ -1,5 +1,6 @@
 #ifndef FT_STRACE_H
 # define FT_STRACE_H
+
 # include <stdio.h>
 # include <stdlib.h>
 # include <string.h>
@@ -13,5 +14,10 @@
 # include <sys/user.h>
 # include <sys/uio.h>
 
-int strace (char *prog, char **args);
+/*tracer.c*/
+int run_tracer(pid_t tracee);
+
+/*printer.c*/
+void print_syscall_retval(long long retval);
+
 #endif
