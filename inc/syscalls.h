@@ -8,14 +8,20 @@ typedef enum {
     ARG_NONE = 0,
     ARG_INT, 
     ARG_LONG, 
-    ARG_PTR, 
+    ARG_SIZE,
     ARG_FD, 
+    ARG_DIRFD,
+    ARG_MODE,
+    ARG_FLAGS,
+    ARG_SIGNUM,
+    ARG_PTR, 
     ARG_STR,
-    ARG_BUF, 
-    ARG_SIZE, 
-    ARG_OFLAGS, 
-    ARG_MODE, 
-    ARG_DIRFD
+    ARG_BUF,
+    ARG_OPEN_FLAGS,
+    ARG_PROT,
+    ARG_MAP_FLAGS,
+    ARG_ACCESS_MODE,
+    ARG_AT_FLAGS,
 } arg_type_t;
 
 typedef struct {
