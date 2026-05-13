@@ -55,8 +55,9 @@ Goal: arguments are formatted, not just `...`. Output is close enough to real st
 - [x] Define an arg-type enum: `INT`, `LONG`, `FD`, `PTR`, `STR` (NUL-terminated), `BUF` (with length from another arg), `FLAGS` (bitmask), `MODE` (octal), `SIGNUM`, `STRUCT_*` (one per shape you care about: `stat`, `sockaddr`, `iovec`, ...).
 - [x] Per-type formatters. `STR`/`BUF` use `process_vm_readv` to copy from the tracee — clamp the length, escape non-printables, suffix with `...` if truncated.
 - [x] Flag/mode tables for the common ones: `O_*` (open), `PROT_*` (mmap), `MAP_*` (mmap), `AT_*` (openat dirfd: `AT_FDCWD`), `S_IF*` modes, `MS_*` (mount), `CLONE_*`. You don't need every flag — match what real strace shows for `ls`, `cat`, `echo`, `/bin/sh -c true`.
-- [ ] Pretty-print structures you encounter often: `struct stat` (just the fields strace shows), `struct timespec`, `struct sockaddr_in`. Read them from the tracee with `process_vm_readv`.
+- [x] Pretty-print structures you encounter often: `struct stat` (just the fields strace shows), `struct timespec`, `struct sockaddr_in`. Read them from the tracee with `process_vm_readv`.
 - [ ] Pointer args that aren't dereferenced: print as `0x%lx` or `NULL`.
+- [ ] Per-syscall return type. `print_syscall_retval` in `src/printer.c` formats every successful return as `%lld`, so `brk`/`mmap`/`mremap`/`shmat` show as decimal (`= 140673492504576`) where real strace prints hex (`= 0x7f...`). Add a `arg_type_t ret` field to `syscall_info_t` (default `ARG_LONG`; `ARG_PTR` for the pointer-returning syscalls above; `ARG_FD` for `open`/`openat`/`socket`/`dup*`/`accept*`/`pipe2`/`epoll_create*`), then dispatch on it inside `print_syscall_retval`.
 
 **Verify:** `diff <(./ft_strace /bin/ls 2>&1) <(strace /bin/ls 2>&1)` shows mostly aligned syscall lines. Spot-check a program that opens files: paths, flags, modes look right.
 
