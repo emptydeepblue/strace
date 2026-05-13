@@ -14,10 +14,11 @@
 # include <sys/user.h>
 # include <sys/uio.h>
 
+# include "syscalls.h"
 /*tracer.c*/
 int run_tracer(pid_t tracee);
 
 /*printer.c*/
-void print_syscall_retval(long long retval);
+void print_syscall_retval(arg_type_t ret_type, long long retval);
 
 #endif

@@ -30,6 +30,7 @@ typedef struct {
     const char  *name;
     int         nargs;
     arg_type_t  args[6];
+    arg_type_t  ret;  /* return type */
 } syscall_info_t;
 
 extern const syscall_info_t syscalls_x86_64[];

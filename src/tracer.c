@@ -6,7 +6,7 @@
 /*   By: everonel <everonel@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/05/07 11:39:38 by everonel          #+#    #+#             */
-/*   Updated: 2026/05/07 14:55:55 by everonel         ###   ########.fr       */
+/*   Updated: 2026/05/13 10:24:50 by everonel         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -55,7 +55,7 @@ static int handle_syscall_stop(pid_t pid, int *in_syscall, pending_t *p) {
         /* Exit: pointer-target memory is now kernel-filled; print full line. */
         long long retval = (long long)regs.rax;
         print_prefix(pid, p, retval);
-        print_syscall_retval(retval);
+        print_syscall_retval(p->info ? p->info->ret : ARG_LONG, retval);
         p->prefix_printed = 0;
     }
     *in_syscall = !*in_syscall;
