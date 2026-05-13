@@ -17,6 +17,7 @@ void print_syscall_retval(arg_type_t ret_type, long long retval) {
         int err = -retval;
         const char *n = strerrorname_np(err);
         fprintf(stderr, " = -1 %s (%s)\n", n ? n : "?", strerror(err));
+        return;
     }
     if (ret_type == ARG_PTR) {
         fprintf(stderr, " = %#llx\n", (unsigned long long)retval);
