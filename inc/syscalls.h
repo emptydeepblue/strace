@@ -22,6 +22,8 @@ typedef enum {
     ARG_MAP_FLAGS,
     ARG_ACCESS_MODE,
     ARG_AT_FLAGS,
+    ARG_STAT,         /* struct stat * (output) — decoded on success */
+    ARG_TIMESPEC,     /* struct timespec * (in or out) — always decoded */
 } arg_type_t;
 
 typedef struct {
@@ -38,6 +40,10 @@ extern const size_t         syscalls_i386_count;
 
 
 int format_arg(pid_t pid, arg_type_t type, unsigned long val,
-               const unsigned long *args, int idx);
+               const unsigned long *args, int idx, long long retval);
+
+/* decode_struct.c — pretty-printers for stat/timespec/etc. */
+int print_stat(pid_t pid, unsigned long ptr, long long retval);
+int print_timespec(pid_t pid, unsigned long ptr);
 
 #endif

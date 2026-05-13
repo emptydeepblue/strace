@@ -184,15 +184,21 @@ static int print_str(pid_t pid, unsigned long val) {
     return print_quoted(buf, slen, truncated);
 }
 
-static int print_buf(pid_t pid, unsigned long val, size_t want) {
+static int print_buf(pid_t pid, unsigned long val, size_t want, long long retval) {
     if (val == 0) return fprintf(stderr, "NULL");
-    size_t cap = want > MAX_STR_PRINT ? MAX_STR_PRINT : want;
+    /* For read-style syscalls only `retval` bytes are valid; for write-style
+       syscalls retval matches `want` (or is the byte-count caller asked for).
+       Treating the requested length as min(want, retval) when retval >= 0
+       handles both correctly without a per-syscall flag. */
+    size_t valid = want;
+    if (retval >= 0 && (size_t)retval < want) valid = (size_t)retval;
+    size_t cap = valid > MAX_STR_PRINT ? MAX_STR_PRINT : valid;
     char buf[MAX_STR_PRINT];
     struct iovec local  = { buf, cap };
     struct iovec remote = { (void *)val, cap };
     ssize_t n = process_vm_readv(pid, &local, 1, &remote, 1, 0);
     if (n < 0) return fprintf(stderr, "0x%lx", val);
-    return print_quoted(buf, (size_t)n, want > (size_t)n);
+    return print_quoted(buf, (size_t)n, valid > (size_t)n);
 }
 
 /* ------------------------------------------------------------------------- */
@@ -200,7 +206,7 @@ static int print_buf(pid_t pid, unsigned long val, size_t want) {
 /* ------------------------------------------------------------------------- */
 
 int format_arg(pid_t pid, arg_type_t type, unsigned long val,
-               const unsigned long *args, int idx) {
+               const unsigned long *args, int idx, long long retval) {
     switch (type) {
     case ARG_NONE:        return fprintf(stderr, "?");
     case ARG_INT:         return fprintf(stderr, "%d",  (int)val);
@@ -218,10 +224,12 @@ int format_arg(pid_t pid, arg_type_t type, unsigned long val,
     case ARG_PROT:        return print_flags(val, prot_tbl, "PROT_NONE");
     case ARG_MAP_FLAGS:   return print_flags(val, map_flags_tbl, NULL);
     case ARG_ACCESS_MODE: return print_flags(val, access_mode_tbl, "F_OK");
+    case ARG_STAT:        return print_stat(pid, val, retval);
+    case ARG_TIMESPEC:    return print_timespec(pid, val);
     case ARG_PTR:         return val ? fprintf(stderr, "0x%lx", val)
                                      : fprintf(stderr, "NULL");
     case ARG_STR:         return print_str(pid, val);
-    case ARG_BUF:         return print_buf(pid, val, args[idx + 1]);
+    case ARG_BUF:         return print_buf(pid, val, args[idx + 1], retval);
     default:              return val ? fprintf(stderr, "0x%lx", val)
                                      : fprintf(stderr, "NULL");
     }
