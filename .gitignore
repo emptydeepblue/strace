@@ -4,3 +4,6 @@
 # Ignore the compiled binary and object files
 ft_strace
 obj/
+
+ref*
+res*

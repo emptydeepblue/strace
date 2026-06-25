@@ -3,7 +3,7 @@ CC=gcc
 CFLAGS=-Wall -Wextra -Werror -Iinc -D_GNU_SOURCE
 LDFLAGS=-lm
 OBJDIR=obj
-SOURCES = src/main.c src/tracer.c src/printer.c src/syscall_table.c src/decode.c src/decode_struct.c
+SOURCES = src/main.c src/tracer.c src/printer.c src/syscall_table.c src/decode.c src/decode_struct.c src/signals.c
 OBJECTS=$(SOURCES:src/%.c=$(OBJDIR)/%.o)
 
 all: $(NAME)

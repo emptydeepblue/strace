@@ -12,6 +12,7 @@
 
 # include "ft_strace.h"
 # include "syscalls.h"
+# include "signals.h"
 
 /* Per-tracee entry-time state. Args from the entry-stop are printed at the
    matching exit-stop, so that pointer-target memory (output buffers, struct
@@ -112,31 +113,72 @@ int run_tracer(pid_t tracee) {
                 print_prefix(w, &p, 0);
                 fprintf(stderr, " = ?\n");
             }
-            fprintf(stderr, "+++ killed by signal %d +++\n", WTERMSIG(status));
+            print_kill_trailer(WTERMSIG(status));
             break;
         }
 
         int event = status >> 16;
-        int sig = 0;
+        int sig = 0;            /* signal to inject on resume */
+        int use_listen = 0;     /* group-stop → PTRACE_LISTEN, not SYSCALL */
 
         if (event == PTRACE_EVENT_EXEC) {
             fprintf(stderr, "execve(...)");
             p.prefix_printed = 1;
             in_syscall = 1;
             seen_exec = 1;
+        } else if (event == PTRACE_EVENT_STOP) {
+            /* Under SEIZE, group-stops surface as EVENT_STOP with WSTOPSIG
+               set to the stopping signal. EVENT_STOP also fires after a
+               successful PTRACE_INTERRUPT (no real stopping signal); that
+               one we just resume. Group-stops must use PTRACE_LISTEN —
+               PTRACE_SYSCALL/CONT here would defeat the stop.
+               Before seen_exec the pre-exec SIGSTOP from raise() leaks
+               through as EVENT_STOP+SIGSTOP; treat it as a plain resume
+               point, not a group-stop. */
+            int stopsig = WSTOPSIG(status);
+            if (seen_exec && (stopsig == SIGSTOP || stopsig == SIGTSTP
+                              || stopsig == SIGTTIN || stopsig == SIGTTOU)) {
+                use_listen = 1;
+            }
         } else if (event != 0) {
             /* Other event-stops (EVENT_EXIT, etc.) — don't toggle, just resume. */
         } else if (WIFSTOPPED(status) && WSTOPSIG(status) == (SIGTRAP | 0x80)) {
-            /* Real syscall-stop. */
+            /* Syscall-stop. */
             if (seen_exec && handle_syscall_stop(w, &in_syscall, &p) < 0) {
                 return -1;
             }
             /* else: pre-exec leftovers (tgkill from raise(SIGSTOP)) — silently swallow. */
+        } else if (WIFSTOPPED(status)) {
+            /* Signal-delivery-stop OR (pre-SEIZE-style) group-stop. The
+               kernel distinguishes them by whether PTRACE_GETSIGINFO works:
+               it returns EINVAL on a group-stop and succeeds otherwise.
+               With SEIZE we normally get group-stops as EVENT_STOP above,
+               but keep the GETSIGINFO check as a belt-and-braces fallback. */
+            int stopsig = WSTOPSIG(status);
+            siginfo_t si;
+            if (ptrace(PTRACE_GETSIGINFO, w, 0, &si) < 0) {
+                if (errno == EINVAL) {
+                    use_listen = 1;
+                } else if (errno != ESRCH) {
+                    perror("ptrace GETSIGINFO");
+                }
+                /* On ESRCH the tracee is gone; the next waitpid reports it. */
+            } else {
+                /* Signal-delivery-stop: report and re-inject. Drop entirely
+                   before exec — the pre-exec SIGSTOP from raise() is a
+                   synchronization artifact, not a real signal; re-injecting
+                   it would push the tracee into group-stop and deadlock. */
+                if (seen_exec) {
+                    print_signal_stop(stopsig, &si);
+                    sig = stopsig;
+                }
+            }
         }
-        /* else: signal-delivery-stop or group-stop. Milestone 4 territory; for now swallow. */
 
-        if (ptrace(PTRACE_SYSCALL, w, sig, 0) < 0 && errno != ESRCH) {
-            perror("ptrace SYSCALL"); return -1;
+        long req = use_listen ? PTRACE_LISTEN : PTRACE_SYSCALL;
+        if (ptrace(req, w, 0, sig) < 0 && errno != ESRCH) {
+            perror(use_listen ? "ptrace LISTEN" : "ptrace SYSCALL");
+            return -1;
         }
     }
     return 0;
