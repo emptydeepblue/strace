@@ -1,5 +1,5 @@
 # Exclude proprietary 42 School materials from public distribution
-# en.subject.pdf
+*.subject.pdf
 
 # Ignore the compiled binary and object files
 ft_strace
@@ -7,3 +7,4 @@ obj/
 
 ref*
 res*
+CLAUDE.md
